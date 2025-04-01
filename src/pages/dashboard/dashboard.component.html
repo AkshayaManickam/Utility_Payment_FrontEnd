@@ -66,12 +66,12 @@
                             </div>
                             <div class="card-footer d-flex justify-content-between">
                                 <button class="btn btn-primary btn-sm pay-btn" 
-                                        (click)="payBill(bill.id)" 
+                                        (click)="openPaymentModal(bill)" 
                                         [disabled]="bill.isPaid === 'Paid'">
                                     <i class="bi bi-credit-card"></i> Pay Now
                                 </button>
                                 <button class="btn btn-outline-dark btn-sm download-btn" 
-                                        (click)="downloadBill(bill.id)">
+                                    (click)="downloadParticularInvoice(bill)">
                                     <i class="bi bi-download"></i> Download
                                 </button>
                             </div>
@@ -79,6 +79,63 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Payment Modal -->
+            <div class="modal" tabindex="-1" role="dialog" id="paymentModal" *ngIf="isPaymentModalVisible">
+                <div class="modal-dialog" role="document">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" style="color:#001f73; margin-left: 220px;">Payment Summary</h5>
+                        </div>
+                        <div class="modal-body" *ngIf="selectedBill">
+                            <div class="modal-layout">
+                                <!-- Left: Payment Summary -->
+                                <div class="modal-left">
+                                    <p><strong style="color:#001f73;">Invoice ID:</strong> {{selectedBill.id}}</p>
+                                    <p><strong style="color:#001f73;">Total Amount:</strong> ₹ {{selectedBill.totalAmount}}</p>
+
+                                    <div *ngIf="isBeforeDueDate(selectedBill)">
+                                        <p><strong style="color:#001f73;">Discount (10%) applied:</strong> -{{discount}}</p>
+                                        <p><strong style="color:#001f73;">Fee Type:</strong> Discount</p>
+                                    </div>
+                                    <div *ngIf="!isBeforeDueDate(selectedBill)">
+                                        <p><strong style="color:#001f73;">Late Fee (5%) applied:</strong> + ₹ {{lateFee}}</p>
+                                        <p><strong style="color:#001f73;">Fee Type:</strong> Late Fee</p>
+                                    </div>
+
+                                    <p><strong style="color:#001f73;">Amount to Pay:</strong> ₹ {{payAmount }}</p>
+                                </div>
+
+                                <!-- Right: Payment Form -->
+                                <div class="modal-right">
+                                    <label for="paymentMethod" style="color:#001f73;">Select Payment Method:</label>
+                                    <select id="paymentMethod" [(ngModel)]="selectedPaymentMethod" (change)="onPaymentMethodChange()">
+                                        <option value="creditCard">Credit Card</option>
+                                        <option value="debitCard">Debit Card</option>
+                                        <option value="wallet">Wallet</option>
+                                    </select>
+
+                                    <div *ngIf="selectedPaymentMethod === 'creditCard' || selectedPaymentMethod === 'debitCard'">
+                                        <label for="cardNumber" style="color:#001f73;">Card Number</label>
+                                        <input type="text" id="cardNumber" [(ngModel)]="cardNumber" placeholder="Enter 16-digit Card Number" maxlength="16" pattern="\d{16}" required>
+
+                                        <label for="expiryDate" style="color:#001f73;">Expiry Date (MM/YY)</label>
+                                        <input type="text" id="expiryDate" [(ngModel)]="expiryDate" placeholder="MM/YY" maxlength="5" pattern="(0[1-9]|1[0-2])\/([0-9]{2})" required>
+
+                                        <label for="cvv" style="color:#001f73;">CVV</label>
+                                        <input type="password" id="cvv" [(ngModel)]="cvv" placeholder="Enter 3-digit CVV" maxlength="3" pattern="\d{3}" required>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" (click)="closePaymentModal()">Close</button>
+                            <button type="button" class="btn btn-primary" (click)="payBill()">Pay Amount</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
         </div>
            
     </main>
