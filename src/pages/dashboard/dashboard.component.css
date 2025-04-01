@@ -1,0 +1,134 @@
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    background: #f8f9fa;
+  }
+  
+  .dashboard {
+    display: flex;
+  }
+  
+  .sidebar {
+    width: 250px;
+    background: #001f73;
+    color: white;
+    padding: 20px;
+    min-height: 100vh;
+  }
+  
+  .sidebar .logo {
+    font-size: 24px;
+    font-weight: bold;
+    text-align: center;
+    padding: 10px;
+  }
+  
+  .sidebar nav ul {
+    list-style: none;
+    padding: 0;
+  }
+  
+  .sidebar nav ul li {
+    padding: 10px 15px;
+    cursor: pointer;
+  }
+  
+  .sidebar nav ul li.active {
+    background: rgb(0, 208, 255);
+    border-radius: 5px;
+  }
+
+  .content {
+    flex: 1;
+    padding: 20px;
+    min-height: 100vh;
+  }
+  
+  .topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px;
+    background: white;
+    color:#001f73;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  }
+
+  .topbar a{
+    text-decoration: none;
+  }
+  
+  .reports h2 {
+    margin: 20px 0;
+  }
+  
+  .summary {
+    display: flex;
+    gap: 35px;
+  }
+  
+  .summary .card {
+    flex: 1;
+    background: white;
+    padding: 15px;
+    text-align: center;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px #001f73;
+  }
+  
+  .kpi {
+    display: flex;
+    gap: 15px;
+    margin-top: 20px;
+  }
+  
+  .kpi .card {
+    flex: 1;
+    background: white;
+    padding: 15px;
+    text-align: center;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px #001f73;
+  }
+
+  .bill-card {
+    border-radius: 12px;
+    transition: transform 0.2s, box-shadow 0.3s;
+    background: #ffffff;
+    margin-bottom: 20px; 
+}
+
+
+.card-header {
+    background: linear-gradient(135deg, #001f73, #001f73);
+    padding: 12px;
+    border-top-left-radius: 12px;
+    border-top-right-radius: 12px;
+}
+
+.badge-success {
+    background-color: #28a745;
+    color: white;
+}
+
+.badge-danger {
+    background-color: #dc3545;
+    color: white;
+}
+
+.pay-btn {
+    background: #001f73;
+    border: none;
+    transition: background 0.3s ease-in-out;
+}
+
+.pay-btn:hover {
+    background: #001f73;
+}
+
+.download-btn:hover {
+    background: #f8f9fa;
+    color: black;
+}
+

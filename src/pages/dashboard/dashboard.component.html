@@ -1,1 +1,87 @@
-<p>dashboard works!</p>
+<div class="dashboard">
+    <aside class="sidebar">
+        <div class="logo">BCC - UBP</div>
+        <nav>
+            <ul>
+                <li [class.active]="activeTab === 'home'" (click)="showHome()">
+                    <i class="icon-home"></i> Home
+                </li>
+                <li [class.active]="activeTab === 'bills'" (click)="activeTab = 'bills'"><i class="icon-user"></i> Manage Bills</li>
+                <li [class.active]="activeTab === 'payments'" (click)="activeTab = 'payments'"><i class="icon-user"></i> Manage Payments</li>
+                <li [class.active]="activeTab === 'help'" (click)="activeTab = 'help'"><i class="icon-invoice"></i> Help Center</li>
+                <li [class.active]="activeTab === 'recipts'" (click)="activeTab = 'recipts'"><i class="icon-report"></i> Recipts</li>
+                <li (click)="logout()"><i class="icon-out"></i> Log out</li>
+            </ul>
+        </nav>
+    </aside>
+  
+    <main class="content">
+        <header class="topbar">       
+            <a href="#" class="pro-version" style="color:#001f73;">BCC UBP Official Home page</a>
+            <div class="profile-icon"></div>
+        </header><br>
+  
+        <section *ngIf="activeTab === 'home'">
+            <h2 style="color:#001f73;">Today's Update</h2><br>
+            <img src="assets/2.png" alt="img" height="300px" width="350px">
+            <img src="assets/1.png" alt="img" height="400px" width="400px" style="float: right;">
+            <div class="summary">
+                <div class="card">
+                    <p><b>Number of bills pending</b></p>
+                    <h3>{{ homeData.users }}</h3>
+                </div>
+                <div class="card">
+                    <p><b>Total Units consumption</b></p>
+                    <h3>{{ homeData.bills }}</h3>
+                </div>
+                <div class="card">
+                    <p><b>Bill Amount Pending</b></p>
+                    <h3>₹{{ homeData.users }}</h3>
+                </div>
+            </div> 
+        </section>
+  
+        <div *ngIf="activeTab === 'bills'">
+            <div class="container mt-4">
+                <div class="row justify-content-center">
+                    <div class="col-lg-4 col-md-6 col-sm-12" *ngFor="let bill of pendingBills">
+                        <div class="card bill-card shadow-lg">
+                            <div class="card-header text-white text-center">
+                                <h5 class="mb-0">Invoice - {{ bill.id }}</h5>
+                            </div>
+                            <div class="card-body">
+                                <ul class="list-unstyled">
+                                    <li> <strong>Service No:</strong> {{ bill.serviceConnectionNumber }}</li>
+                                    <li><strong>Units:</strong> {{ bill.unitsConsumed }} kWh</li>
+                                    <li><strong>Amount:</strong> ₹ {{ bill.totalAmount }}</li>
+                                    <li><strong>Bill Date:</strong> {{ bill.billGeneratedDate | date }}</li>
+                                    <li><strong>Due Date: </strong> {{ bill.dueDate | date }}</li><br>
+                                    <li>
+                                        <strong>Status: </strong> 
+                                        <span class="badge" [ngClass]="bill.isPaid === 'Paid' ? 'badge-success' : 'badge-danger'">
+                                            {{ bill.isPaid }}
+                                        </span>
+                                    </li>
+                                </ul>
+                            </div>
+                            <div class="card-footer d-flex justify-content-between">
+                                <button class="btn btn-primary btn-sm pay-btn" 
+                                        (click)="payBill(bill.id)" 
+                                        [disabled]="bill.isPaid === 'Paid'">
+                                    <i class="bi bi-credit-card"></i> Pay Now
+                                </button>
+                                <button class="btn btn-outline-dark btn-sm download-btn" 
+                                        (click)="downloadBill(bill.id)">
+                                    <i class="bi bi-download"></i> Download
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+           
+    </main>
+      
+  </div>
+  

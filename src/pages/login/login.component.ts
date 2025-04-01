@@ -56,25 +56,35 @@ export class LoginComponent {
       this.toastr.warning('Please enter a valid email.', 'Warning');
     }
   }
+
   verifyOtp() {
-    if (this.otpForm.valid) {
-      const enteredOtp = this.otpForm.value.otp;
-      this.authService.verifyOtp(this.email, enteredOtp).subscribe(
-        (response) => {
-          if (response.valid) {
-            this.toastr.success('Login successful!', 'Success');
-            localStorage.setItem('isLoggedIn', 'true');
-            this.router.navigate(['/dashboard']);
-          } else {
-            this.toastr.error('Invalid OTP! Try Again.', 'Error');
-          }
-        },
-        (error) => {
-          this.toastr.error('Error verifying OTP. Try again!', 'Error');
+  if (this.otpForm.valid) {
+    const enteredOtp = this.otpForm.value.otp;
+    this.authService.verifyOtp(this.email, enteredOtp).subscribe(
+      (response) => {
+        console.log('OTP verification response:', response);  // Log OTP verification response
+        if (response.valid) {
+          this.toastr.success('Login successful!', 'Success');
+          localStorage.setItem('isLoggedIn', 'true');
+          localStorage.setItem('userId', response.userId); // Assuming response contains userId
+          console.log('User ID set in localStorage:', response.userId);  // Log the userId to confirm it
+          localStorage.setItem('userEmail', this.email);
+          console.log(this.email);
+          localStorage.setItem('userName', response.userName); // Assuming response contains userName
+
+          this.router.navigate(['/dashboard']);
+        } else {
+          this.toastr.error('Invalid OTP! Try Again.', 'Error');
         }
-      );
-    } else {
-      this.toastr.warning('Please enter a valid 6-digit OTP.', 'Warning');
-    }
+      },
+      (error) => {
+        console.error('Error verifying OTP:', error);  // Log error details
+        this.toastr.error('Error verifying OTP. Try again!', 'Error');
+      }
+    );
+  } else {
+    this.toastr.warning('Please enter a valid 6-digit OTP.', 'Warning');
   }
+}
+
 }
