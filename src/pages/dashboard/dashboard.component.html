@@ -8,8 +8,8 @@
                 </li>
                 <li [class.active]="activeTab === 'bills'" (click)="activeTab = 'bills'"><i class="icon-user"></i> Manage Bills</li>
                 <li [class.active]="activeTab === 'payments'" (click)="activeTab = 'payments'"><i class="icon-user"></i> Manage Payments</li>
+                <li [class.active]="activeTab === 'wallet'" (click)="activeTab = 'wallet'"><i class="icon-report"></i>Wallet</li>
                 <li [class.active]="activeTab === 'help'" (click)="activeTab = 'help'"><i class="icon-invoice"></i> Help Center</li>
-                <li [class.active]="activeTab === 'recipts'" (click)="activeTab = 'recipts'"><i class="icon-report"></i> Recipts</li>
                 <li (click)="logout()"><i class="icon-out"></i> Log out</li>
             </ul>
         </nav>
@@ -42,9 +42,31 @@
         </section>
   
         <div *ngIf="activeTab === 'bills'">
+            <div class="filters mb-3 d-flex justify-content-between">
+                <div>
+                    <label for="statusFilter"><strong>Filter by Status:</strong></label>
+                    <select id="statusFilter" class="form-select" [(ngModel)]="statusFilter" (change)="applyFilters()">
+                        <option value="ALL">View All</option>
+                        <option value="PAID">Paid</option>
+                        <option value="Not Paid">Not Paid</option>
+                    </select>
+                </div>
+    
+                <div>
+                    <label for="dateFilter"><strong>Filter by Date:</strong></label>
+                    <select id="dateFilter" class="form-select" [(ngModel)]="dateFilter" (change)="applyFilters()">
+                        <option value="ALL">View All</option>
+                        <option value="3M">Last 3 Months</option>
+                        <option value="6M">Last 6 Months</option>
+                    </select>
+                </div>
+            </div>
             <div class="container mt-4">
+                <div *ngIf="pendingBills.length === 0" class="text-center">
+                    <h4 class="text-muted">No Bills to Pay</h4>
+                </div>
                 <div class="row justify-content-center">
-                    <div class="col-lg-4 col-md-6 col-sm-12" *ngFor="let bill of pendingBills">
+                    <div class="col-lg-4 col-md-6 col-sm-12" *ngFor="let bill of filteredBills">
                         <div class="card bill-card shadow-lg">
                             <div class="card-header text-white text-center">
                                 <h5 class="mb-0">Invoice - {{ bill.id }}</h5>
@@ -58,21 +80,21 @@
                                     <li><strong>Due Date: </strong> {{ bill.dueDate | date }}</li><br>
                                     <li>
                                         <strong>Status: </strong> 
-                                        <span class="badge" [ngClass]="bill.isPaid === 'Paid' ? 'badge-success' : 'badge-danger'">
+                                        <span class="badge" [ngClass]="bill.isPaid === 'PAID' ? 'badge-success' : 'badge-danger'">
                                             {{ bill.isPaid }}
                                         </span>
-                                    </li>
+                                    </li>                                    
                                 </ul>
                             </div>
                             <div class="card-footer d-flex justify-content-between">
                                 <button class="btn btn-primary btn-sm pay-btn" 
                                         (click)="openPaymentModal(bill)" 
-                                        [disabled]="bill.isPaid === 'Paid'">
+                                        [disabled]="bill.isPaid === 'PAID'">
                                     <i class="bi bi-credit-card"></i> Pay Now
                                 </button>
                                 <button class="btn btn-outline-dark btn-sm download-btn" 
                                     (click)="downloadParticularInvoice(bill)">
-                                    <i class="bi bi-download"></i> Download
+                                    <i class="bi bi-download"></i>
                                 </button>
                             </div>
                         </div>
@@ -94,11 +116,11 @@
                                     <p><strong style="color:#001f73;">Invoice ID:</strong> {{selectedBill.id}}</p>
                                     <p><strong style="color:#001f73;">Total Amount:</strong> ₹ {{selectedBill.totalAmount}}</p>
 
-                                    <div *ngIf="isBeforeDueDate(selectedBill)">
+                                    <div *ngIf="isBeforeDueDate">
                                         <p><strong style="color:#001f73;">Discount (10%) applied:</strong> -{{discount}}</p>
                                         <p><strong style="color:#001f73;">Fee Type:</strong> Discount</p>
                                     </div>
-                                    <div *ngIf="!isBeforeDueDate(selectedBill)">
+                                    <div *ngIf="isAfterDueDate">
                                         <p><strong style="color:#001f73;">Late Fee (5%) applied:</strong> + ₹ {{lateFee}}</p>
                                         <p><strong style="color:#001f73;">Fee Type:</strong> Late Fee</p>
                                     </div>
@@ -110,12 +132,12 @@
                                 <div class="modal-right">
                                     <label for="paymentMethod" style="color:#001f73;">Select Payment Method:</label>
                                     <select id="paymentMethod" [(ngModel)]="selectedPaymentMethod" (change)="onPaymentMethodChange()">
-                                        <option value="creditCard">Credit Card</option>
-                                        <option value="debitCard">Debit Card</option>
-                                        <option value="wallet">Wallet</option>
+                                        <option value="CREDIT">Credit Card</option>
+                                        <option value="DEBIT">Debit Card</option>
+                                        <option value="WALLET">Wallet</option>
                                     </select>
 
-                                    <div *ngIf="selectedPaymentMethod === 'creditCard' || selectedPaymentMethod === 'debitCard'">
+                                    <div *ngIf="selectedPaymentMethod === 'CREDIT' || selectedPaymentMethod === 'DEBIT'">
                                         <label for="cardNumber" style="color:#001f73;">Card Number</label>
                                         <input type="text" id="cardNumber" [(ngModel)]="cardNumber" placeholder="Enter 16-digit Card Number" maxlength="16" pattern="\d{16}" required>
 
@@ -130,15 +152,74 @@
                         </div>
                         <div class="modal-footer">
                             <button type="button" class="btn btn-secondary" (click)="closePaymentModal()">Close</button>
-                            <button type="button" class="btn btn-primary" (click)="payBill()">Pay Amount</button>
+                            <button type="button" class="btn btn-primary" (click)="payBill()" style="background-color: blue;">Pay Amount</button>
                         </div>
                     </div>
                 </div>
-            </div>
-            
+            </div>         
         </div>
-           
-    </main>
-      
+
+        <div class="manage-payments-container" *ngIf="activeTab === 'payments'">
+            <div class="top-controls">
+              <input type="text" [(ngModel)]="searchQuery" placeholder="Search Payments..." class="search-bar" />
+            </div><br>
+          
+            <table class="user-table">
+              <thead>
+                <tr>
+                  <th>Payment ID</th>
+                  <th>Amount (₹)</th>
+                  <th>Invoice ID</th>
+                  <th>Payment Date</th>
+                  <th>Payment Method</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let payment of getFilteredPayments()">
+                  <td>{{ payment.id }}</td>
+                  <td>{{ payment.amount | currency:'INR' }}</td>
+                  <td>{{ payment.invoice?.id || 'N/A' }}</td>
+                  <td>{{ payment.paymentDate | date: 'dd/MM/yyyy' }}</td>
+                  <td>{{ payment.paymentMethod }}</td>  
+                </tr>
+              </tbody>
+            </table><br>
+          
+            <div class="pagination-controls">
+              <button (click)="changePage(currentPage - 1)" [disabled]="currentPage === 0">Previous</button>
+              <span>Page {{ currentPage + 1 }} of {{ totalPages }}</span>
+              <button (click)="changePage(currentPage + 1)" [disabled]="currentPage >= totalPages - 1">Next</button>
+            </div>
+          </div>
+
+        <div class="wallet-container" *ngIf="activeTab === 'wallet'">
+            <div class="wallet-content sparkle-animation" >
+                <!-- Wallet Balance Card -->
+                <div class="wallet-card">
+                <h2>Wallet Balance</h2>
+                <p class="balance">₹{{ walletBalance }}</p>
+                </div>
+                
+
+                <!-- Recent Transactions -->
+                <div class="transactions">
+                    <h3>Recent Transactions</h3>
+                    <div *ngIf="transactions.length > 0; else noTransactions">
+                        <div *ngFor="let transaction of transactions" class="transaction-card">
+                          <div>
+                            <small class="transaction-date">{{ transaction.date }}</small> <!-- Display Payment Date -->
+                          </div>
+                          <span [class.credit]="transaction.amount > 0" [class.debit]="transaction.amount < 0">
+                            ₹{{ transaction.amount }}
+                          </span>
+                        </div>
+                    </div>
+                    <ng-template #noTransactions>
+                        <p class="no-transactions">No wallet transactions</p>
+                    </ng-template>
+                </div>                  
+            </div>
+        </div>
+    </main>    
   </div>
   

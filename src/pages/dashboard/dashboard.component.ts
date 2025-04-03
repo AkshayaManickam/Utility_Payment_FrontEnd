@@ -1,10 +1,15 @@
 import { CommonModule } from '@angular/common';
-import { Component } from '@angular/core';
+import { Component, Input } from '@angular/core';
 import { InvoiceService } from '../../services/invoice.service';
 import { Bill } from '../../models/Bill'; 
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable'; 
 import { FormsModule } from '@angular/forms';
+import { PaymentService } from '../../services/payment.service';
+import { DiscountService } from '../../services/discount.service';
+import { ToastrModule, ToastrService } from 'ngx-toastr';
+import { Payment } from '../../models/Payment';
+import { WalletService } from '../../services/wallet.service';
 
 @Component({
   selector: 'app-dashboard',
@@ -13,7 +18,7 @@ import { FormsModule } from '@angular/forms';
   styleUrls: ['./dashboard.component.css']
 })
 export class DashboardComponent {
-  activeTab: string = 'home'; 
+  @Input() activeTab: string = 'home';
   homeData = { users: 0, bills: 0 };
 
   showHome() {
@@ -22,31 +27,31 @@ export class DashboardComponent {
 
   logout() {
     console.log('User logged out');
-    // Handle logout logic here
   }
 
-  pendingBills: Bill[] = [];  // Initialize as empty array
+  pendingBills: Bill[] = [];  
   userEmail: string | null = null;
 
-  constructor(private invoiceService: InvoiceService) {}
+  constructor(private invoiceService: InvoiceService,private paymentService:PaymentService,private discountService: DiscountService,private toastr: ToastrService,private walletService: WalletService) {}
 
   ngOnInit(): void {
-    // Fetch user email from local storage
     this.userEmail = localStorage.getItem('userEmail');
     if (this.userEmail) {
       console.log('User Email:', this.userEmail);
       this.loadPendingBills();
     } else {
       console.warn('User email is not available, cannot load bills.');
-    }
+    } 
+    this.loadPayments();
+    this.fetchWalletBalance();
+    this.fetchRecentTransactions();
   }
 
   loadPendingBills(): void {
     if (this.userEmail) {
       this.invoiceService.getPendingBills(this.userEmail).subscribe({
-        next: (bills: any[]) => {  // 'any' if response structure is unknown
+        next: (bills: any[]) => { 
           console.log('Bills fetched:', bills);
-          // Map the response to the expected Bill structure
           this.pendingBills = bills.map(bill => ({
             id: bill.id,
             serviceConnectionNumber: bill.serviceConnectionNumber,
@@ -56,15 +61,16 @@ export class DashboardComponent {
             dueDate: bill.dueDate,
             isPaid: bill.isPaid
           }));
+          this.applyFilters();
         },
         error: (err) => {
           console.error('Error fetching bills', err);
-          this.pendingBills = [];  // Reset to empty array on error
+          this.pendingBills = []; 
         }
       });
     } else {
       console.warn('User email not found, unable to load bills.');
-      this.pendingBills = [];  // Reset to empty array if email is not available
+      this.pendingBills = [];  
     }
   }
   
@@ -145,66 +151,249 @@ export class DashboardComponent {
     doc.save(`Invoice_${invoice.id}.pdf`);
   }
 
-    isPaymentModalVisible: boolean = false;   // To toggle modal visibility
-    // Selected bill for payment
-    selectedBill: Bill | undefined;
-    selectedPaymentMethod: string = 'creditCard'; // Default payment method
+    isPaymentModalVisible: boolean = false;  
+    @Input() selectedBill: Bill | undefined;
+    selectedPaymentMethod: string = 'creditCard'; 
     creditCardNumber: string = '';
     debitCardNumber: string = '';
     cardNumber: string = ''; 
     expiryDate: string = ''; 
     cvv: string = ''; 
     walletId: string = '';
-    discount: number = 0;  // Discount amount
-    lateFee: number = 0;  // Late fee amount
-    payAmount: number = 0;  // Final amount to pay
+    discount: number = 0;  
+    lateFee: number = 0;  
+    payAmount: number = 0;
+    isBeforeDueDate = false;
+    isAfterDueDate = false;
 
-    // Open the payment modal
     openPaymentModal(bill: Bill) {
       console.log("Opening payment modal for bill:", bill);
       this.selectedBill = bill;
       this.isPaymentModalVisible = true;
-      if (this.isBeforeDueDate(bill)) {
-        this.discount = bill.totalAmount * 0.10; 
-        this.lateFee = 0;
-      } else {
-        this.lateFee = bill.totalAmount * 0.05; 
-        this.discount = 0;
-      }
-      this.payAmount = bill.totalAmount - this.discount + this.lateFee;
+      this.checkDueDateAndFetchDiscount(); 
     }
-
-    // Close the payment modal
     closePaymentModal() {
       this.isPaymentModalVisible = false;
     }
 
-    // Check if the bill is before the due date
-    isBeforeDueDate(bill: Bill): boolean {
-      const dueDate = new Date(bill.dueDate);
-      const currentDate = new Date();
-      return currentDate <= dueDate;
-    }
-
-    // Handle payment method change
     onPaymentMethodChange() {
-      // You can add further logic to handle changes in payment method
       console.log('Selected payment method:', this.selectedPaymentMethod);
     }
 
-    // Handle bill payment
     payBill() {
-      // Here, you can make an API call to process the payment
-      console.log('Payment processed with', this.selectedPaymentMethod);
 
-      // Example of calling a service to process the payment
-      // this.paymentService.processPayment(this.selectedBill, this.selectedPaymentMethod, this.payAmount)
-      //     .subscribe(response => {
-      //       // Handle success or failure
-      //     });
+      const discountType = this.isBeforeDueDate ? "beforeDueDate" : this.isAfterDueDate ? "afterDueDate" : "None";  
 
-      // Close the modal after payment
-      this.closePaymentModal();
+      const paymentData = {
+        invoiceId: this.selectedBill?.id,
+        amount: this.payAmount,  
+        paymentMethod: this.selectedPaymentMethod,
+        discountType: discountType
+      };
+      console.log("Sending Payment Data:", paymentData);
+      this.paymentService.makePayment(paymentData)
+        .subscribe({
+          next: (response) => {
+            console.log("Payment Success Response:", response);
+            this.resetFormBill();
+            this.toastr.success(response.message, 'Success'); 
+            this.loadPendingBills();
+            this.fetchRecentTransactions();
+            this.closePaymentModal();
+          },
+          error: (error) => {
+            console.error("Payment Error:", error);
+            const errorMessage = error?.error?.message || "Unknown error";
+            this.toastr.error(errorMessage, 'Error'); 
+            console.log(errorMessage);
+            this.resetFormBill();
+            this.loadPendingBills();
+            this.closePaymentModal();
+          }
+        });
     }
 
+    resetFormBill() {
+      this.selectedBill = undefined;
+      this.payAmount = 0;
+      this.selectedPaymentMethod = '';
+      this.cardNumber = '';
+      this.expiryDate = '';
+      this.cvv = '';
+    }
+
+    generateCrashCard() {
+      const crashCardOffers = [
+          { offer: "₹50 Cashback on Next Payment", discount: 50, validity: "7 Days" },
+          { offer: "10% Off on Next Recharge", discount: 10, validity: "5 Days" },
+          { offer: "Free ₹100 Shopping Voucher", discount: 100, validity: "7 Days" },
+          { offer: "1-Month Free Subscription", discount: 0, validity: "30 Days" }
+      ];
+  
+      return crashCardOffers[Math.floor(Math.random() * crashCardOffers.length)];
+    }
+
+    closeSuccessModal() {
+      this.showSuccessModal = false;
+    }
+
+    showSuccessModal: boolean = false;
+    
+    checkDueDateAndFetchDiscount() {
+      console.log('Checking due date and fetching discount for bill:', this.selectedBill);    
+      if (!this.selectedBill || !this.selectedBill.dueDate) {
+        console.warn('No selected bill or due date found!');
+        return;
+      }
+      const dueDate = new Date(this.selectedBill.dueDate); // Convert dueDate to Date object
+      const today = new Date();
+      console.log(today);
+      if (today <= dueDate) {
+        this.isBeforeDueDate = true;
+        this.isAfterDueDate = false;
+        this.discountService.getDiscountedAmount(this.selectedBill?.id ?? 0, 'beforeDueDateAndOnline')
+        .subscribe(
+          (response) => {
+            this.payAmount= response; 
+            this.lateFee = 0; 
+            this.discount = (this.selectedBill?.totalAmount ?? 0) - this.payAmount; 
+          },
+          (error) => {
+            console.error('Error fetching discount:', error);
+            this.discount = 0;
+          }
+        );
+    
+      } else {
+        this.isBeforeDueDate = false;
+        this.isAfterDueDate = true;
+    
+        this.discountService.getDiscountedAmount(this.selectedBill?.id ?? 0, 'afterDueDate')
+        .subscribe(
+          (response) => {
+            this.payAmount = response; 
+            this.discount = 0; 
+            this.lateFee = (this.selectedBill?.totalAmount ?? 0) + this.payAmount;
+          },
+          (error) => {
+            console.error('Error fetching discount:', error);
+            this.discount = 0;
+          }
+        );
+      }
+    }
+
+    payments: Payment[] = [];
+    searchQuery: string = '';
+    currentPage: number = 0;
+    itemsPerPage: number = 5;
+    totalPages: number = 0;
+
+    loadPayments(): void {
+      if (this.userEmail) {
+        this.paymentService.getAllPayments(this.userEmail).subscribe(data => {
+          console.log(data);
+          this.payments = data;
+          this.totalPages = Math.ceil(this.payments.length / this.itemsPerPage);
+        });
+      }
+    }
+  
+    getFilteredPayments(): Payment[] {
+      let filteredPayments = this.payments.filter(payment =>
+        payment.id?.toString().includes(this.searchQuery) ||
+        (payment.invoice?.id ? payment.invoice.id.toString().includes(this.searchQuery) : false) ||
+        payment.paymentMethod.toLowerCase().includes(this.searchQuery.toLowerCase())
+      );
+    
+      return filteredPayments.slice(this.currentPage * this.itemsPerPage, (this.currentPage + 1) * this.itemsPerPage);
+    }
+    
+  
+    changePage(newPage: number): void {
+      if (newPage >= 0 && newPage < this.totalPages) {
+        this.currentPage = newPage;
+      }
+    }
+    
+    walletBalance: number = 0;
+    rewardPoints = 25;
+
+    fetchWalletBalance() {
+      if(this.userEmail){
+        this.walletService.getWalletBalance(this.userEmail).subscribe(
+            balance => {
+              console.log(balance);
+                this.walletBalance = balance;
+            },
+            error => {
+                console.error('Error fetching wallet balance', error);
+            }
+        );
+      }
+  }
+
+  
+  filteredBills: any[] = [];
+  statusFilter: string = 'Not Paid';
+  dateFilter: string = 'ALL';
+
+  applyFilters() {
+    const today = new Date();
+    let filtered = [...this.pendingBills];
+    if (this.statusFilter === 'PAID') {
+      filtered = filtered.filter(bill => bill.isPaid === 'PAID');
+    } else if (this.statusFilter === 'Not Paid') {
+      filtered = filtered.filter(bill => bill.isPaid !== 'PAID');
+    }
+    if (this.dateFilter === '3M') {
+      const threeMonthsAgo = new Date();
+      threeMonthsAgo.setMonth(today.getMonth() - 3);
+      filtered = filtered.filter(bill => new Date(bill.billGeneratedDate) >= threeMonthsAgo);
+    } else if (this.dateFilter === '6M') {
+      const sixMonthsAgo = new Date();
+      sixMonthsAgo.setMonth(today.getMonth() - 6);
+      filtered = filtered.filter(bill => new Date(bill.billGeneratedDate) >= sixMonthsAgo);
+    }
+    this.filteredBills = filtered;
+  }
+
+  transactions: any[] = [];
+
+  fetchRecentTransactions() {
+    if(this.userEmail){
+      this.paymentService.getWalletTransactions(this.userEmail).subscribe(
+        (data) => {
+          console.log('wallet');
+          console.log(data);
+          this.transactions = data.map((payment: Payment) => ({
+            description: `Payment via ${payment.paymentMethod}`,
+            amount: payment.amount,
+            date: new Date(payment.paymentDate).toLocaleDateString('en-IN', {
+              day: '2-digit',
+              month: 'short',
+              year: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit'
+          }) 
+          }));
+        },
+        (error) => {
+          console.error('Error fetching transactions:', error);
+        }
+      );
+    }
+  }
+
+  sparkles: any[] = [];
+
+  createSparkles() {
+    this.sparkles = Array.from({ length: 20 }).map((_, i) => ({
+      id: i,
+      left: Math.random() * 100 + '%',
+      top: Math.random() * 50 + 'px',
+      animationDelay: Math.random() * 0.5 + 's'
+    }));
+  }
+ 
 }
