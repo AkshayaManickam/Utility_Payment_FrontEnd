@@ -1,6 +1,6 @@
 <div class="dashboard">
     <aside class="sidebar">
-        <div class="logo">BCC - UBP</div>
+        <div class="logo">BBC - UBP</div>
         <nav>
             <ul>
                 <li [class.active]="activeTab === 'home'" (click)="showHome()">
@@ -17,30 +17,39 @@
   
     <main class="content">
         <header class="topbar">       
-            <a href="#" class="pro-version" style="color:#001f73;">BCC UBP Official Home page</a>
+            <a href="#" class="pro-version" style="color:#001f73;">BBC UBP Official Home page</a>
             <div class="profile-icon"></div>
         </header><br>
   
-        <section *ngIf="activeTab === 'home'">
-            <h2 style="color:#001f73;">Today's Update</h2><br>
-            <img src="assets/2.png" alt="img" height="300px" width="350px">
-            <img src="assets/1.png" alt="img" height="400px" width="400px" style="float: right;">
-            <div class="summary">
-                <div class="card">
-                    <p><b>Number of bills pending</b></p>
-                    <h3>{{ homeData.users }}</h3>
-                </div>
-                <div class="card">
-                    <p><b>Total Units consumption</b></p>
-                    <h3>{{ homeData.bills }}</h3>
-                </div>
-                <div class="card">
-                    <p><b>Bill Amount Pending</b></p>
-                    <h3>₹{{ homeData.users }}</h3>
-                </div>
-            </div> 
+        <section id="home-section" *ngIf="activeTab === 'home'">
+            <!-- Units Consumption -->
+            <div class="card traffic">
+                <h2>Units Consumption</h2>
+                <i class="bi bi-activity icon"></i>
+                <strong>{{ unitsConsumed }}</strong>
+            </div>
+            
+            <!-- Pending Bills -->
+            <div class="card default-card">
+                <h2>Pending Bills</h2>
+                <i class="bi bi-receipt icon"></i>
+                <strong>{{ notPaidBillCount }}</strong>
+            </div>
+            
+            <!-- Amount Debited -->
+            <div class="card default-card">
+                <h2>Amount to pay</h2>
+                <i class="bi bi-cash-coin icon"></i>
+                <strong>{{ notPaidAmount }}</strong>
+            </div>
+        
+            <!-- Download Report -->
+            <div class="card report-card">
+                <p>Download your History</p>
+                <button class="report-btn" (click)="downloadReport()">Download Report</button>
+            </div>
         </section>
-  
+        
         <div *ngIf="activeTab === 'bills'">
             <div class="filters mb-3 d-flex justify-content-between">
                 <div>
@@ -177,7 +186,7 @@
               <tbody>
                 <tr *ngFor="let payment of getFilteredPayments()">
                   <td>{{ payment.id }}</td>
-                  <td>{{ payment.amount | currency:'INR' }}</td>
+                  <td style="color:#001f73;"><b>{{ payment.amount | currency:'INR' }}</b></td>
                   <td>{{ payment.invoice?.id || 'N/A' }}</td>
                   <td>{{ payment.paymentDate | date: 'dd/MM/yyyy' }}</td>
                   <td>{{ payment.paymentMethod }}</td>  
@@ -190,10 +199,10 @@
               <span>Page {{ currentPage + 1 }} of {{ totalPages }}</span>
               <button (click)="changePage(currentPage + 1)" [disabled]="currentPage >= totalPages - 1">Next</button>
             </div>
-          </div>
+        </div>
 
         <div class="wallet-container" *ngIf="activeTab === 'wallet'">
-            <div class="wallet-content sparkle-animation" >
+            <div class="wallet-content " >
                 <!-- Wallet Balance Card -->
                 <div class="wallet-card">
                 <h2>Wallet Balance</h2>
@@ -220,6 +229,85 @@
                 </div>                  
             </div>
         </div>
+
+        <div *ngIf="activeTab === 'help'">
+            <div class="help-container">
+                <h2>We're Here to Help!</h2>
+                <form [formGroup]="helpForm" (ngSubmit)="submitHelpRequest()" class="help-form">
+                    <!-- User Email -->
+                    <div class="form-group">
+                        <label for="email">Your Email:</label>
+                        <input type="email" id="email" class="form-control" formControlName="userEmail" readonly />
+                    </div>
+            
+                    <!-- Query Type Selection -->
+                    <div class="form-group">
+                        <label for="query">Select Your Query:</label>
+                        <select id="query" class="form-control" formControlName="queryType" (change)="onQueryChange()">
+                            <option value="" disabled selected>Select a query</option>
+                            <option value="Change Name">Change Name</option>
+                            <option value="Mistake in units consumption">Mistake in Units Consumption</option>
+                            <option value="Change Phone Number">Change Phone Number</option>
+                            <option value="Change Email ID">Change Email ID</option>
+                        </select>
+                    </div>
+            
+                    <!-- If "Change Name" is selected -->
+                    <div class="form-group" *ngIf="helpForm.get('queryType')?.value === 'Change Name'">
+                        <label for="oldName">Old Name:</label>
+                        <input type="text" id="oldName" class="form-control" formControlName="oldName" />
+            
+                        <label for="newName">New Name:</label>
+                        <input type="text" id="newName" class="form-control" formControlName="newName" />
+                    </div>
+            
+                    <!-- If "Change Phone Number" is selected -->
+                    <div class="form-group" *ngIf="helpForm.get('queryType')?.value === 'Change Phone Number'">
+                        <label for="oldPhone">Old Phone Number:</label>
+                        <input type="text" id="oldPhone" class="form-control" formControlName="oldPhone" />
+            
+                        <label for="newPhone">New Phone Number:</label>
+                        <input type="text" id="newPhone" class="form-control" formControlName="newPhone" />
+                    </div>
+            
+                    <!-- If "Change Email ID" is selected -->
+                    <div class="form-group" *ngIf="helpForm.get('queryType')?.value === 'Change Email ID'">
+                        <label for="oldEmail">Old Email:</label>
+                        <input type="text" id="oldEmail" class="form-control" formControlName="oldEmail" />
+            
+                        <label for="newEmail">New Email:</label>
+                        <input type="text" id="newEmail" class="form-control" formControlName="newEmail" />
+                    </div>
+            
+                    <button type="submit" class="help-btn">Submit Request</button>
+                </form>
+            </div>
+            <div class="help-table-container" *ngIf="helpRequests.length > 0">
+                <h2 style="color: #001f73;font-family: 'Franklin Gothic Medium', 'Arial Narrow', Arial, sans-serif;">History</h2>
+                <table class="help-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Email</th>
+                            <th>Query Type</th>
+                            <th>Old Value</th>
+                            <th>New Value</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr *ngFor="let request of helpRequests">
+                            <td>{{ request.id }}</td>
+                            <td>{{ request.userMail }}</td>
+                            <td>{{ request.query }}</td>
+                            <td>{{ request.oldValue || 'N/A' }}</td>
+                            <td>{{ request.newValue || 'N/A' }}</td>
+                            <td [ngClass]="getStatusClass(request.status)">{{ request.status }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>     
     </main>    
   </div>
   

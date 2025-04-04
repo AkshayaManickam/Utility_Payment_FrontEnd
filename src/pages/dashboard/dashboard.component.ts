@@ -4,39 +4,80 @@ import { InvoiceService } from '../../services/invoice.service';
 import { Bill } from '../../models/Bill'; 
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable'; 
-import { FormsModule } from '@angular/forms';
+import { FormBuilder, FormControl, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { PaymentService } from '../../services/payment.service';
 import { DiscountService } from '../../services/discount.service';
 import { ToastrModule, ToastrService } from 'ngx-toastr';
 import { Payment } from '../../models/Payment';
 import { WalletService } from '../../services/wallet.service';
+import { Chart } from 'chart.js/auto';
+import { Router } from '@angular/router';
+import { Observable } from 'rxjs';
+import { UserService } from '../../services/user.service';
+import { HelpCenterService } from '../../services/help-center.service';
+
 
 @Component({
   selector: 'app-dashboard',
-  imports: [CommonModule,FormsModule],
+  imports: [CommonModule,FormsModule,ReactiveFormsModule],
   templateUrl: './dashboard.component.html',
   styleUrls: ['./dashboard.component.css']
 })
 export class DashboardComponent {
   @Input() activeTab: string = 'home';
-  homeData = { users: 0, bills: 0 };
 
   showHome() {
     this.activeTab = 'home';
   }
 
   logout() {
-    console.log('User logged out');
+    const confirmLogout = window.confirm('Are you sure you want to log out?');
+    if (confirmLogout) {
+      console.log('User logged out');
+      localStorage.removeItem('authToken'); 
+      sessionStorage.removeItem('authToken'); 
+      this.router.navigate(['/login']);
+    }
   }
 
   pendingBills: Bill[] = [];  
   userEmail: string | null = null;
+  userForm!: FormGroup;
+  helpForm!: FormGroup; 
 
-  constructor(private invoiceService: InvoiceService,private paymentService:PaymentService,private discountService: DiscountService,private toastr: ToastrService,private walletService: WalletService) {}
+  constructor(private invoiceService: InvoiceService,private paymentService:PaymentService,private discountService: DiscountService,private toastr: ToastrService,private walletService: WalletService,private router: Router,private userService: UserService,private helpService: HelpCenterService,private fb: FormBuilder) {
+    this.userForm = this.fb.group({
+      userEmail: new FormControl('')
+    });
+  }
 
   ngOnInit(): void {
+
+    this.userForm = this.fb.group({
+      userEmail: new FormControl({ value: '', disabled: true })
+    });
+
+    this.helpForm = this.fb.group({
+      userEmail: new FormControl({ value: '', disabled: true }),  // Read-only email field
+      queryType: new FormControl('', Validators.required)  // Dropdown field (required)
+    });
+
     this.userEmail = localStorage.getItem('userEmail');
+
+    this.helpForm = this.fb.group({
+      userEmail: new FormControl({ value: this.userEmail || '', disabled: true }),
+      queryType: new FormControl(''),
+      oldName: new FormControl(''),
+      newName: new FormControl(''),
+      oldPhone: new FormControl(''),
+      newPhone: new FormControl(''),
+      oldEmail: new FormControl(''),
+      newEmail: new FormControl('')
+    });
+
     if (this.userEmail) {
+      this.userForm.patchValue({ userEmail: this.userEmail });
+      this.helpForm.patchValue({ userEmail: this.userEmail }); 
       console.log('User Email:', this.userEmail);
       this.loadPendingBills();
     } else {
@@ -44,7 +85,21 @@ export class DashboardComponent {
     } 
     this.loadPayments();
     this.fetchWalletBalance();
+    this.getUserConsumption();
+    this.loadHelpRequests();
     this.fetchRecentTransactions();
+  }
+
+  unitsConsumed: number = 0;
+  
+  getUserConsumption() {
+    if(this.userEmail){
+      this.userService.getTotalConsumption(this.userEmail)
+        .subscribe(
+          (data) => this.unitsConsumed = data,
+          (error) => console.error('Error fetching consumption data:', error)
+        );
+    }
   }
 
   loadPendingBills(): void {
@@ -73,54 +128,71 @@ export class DashboardComponent {
       this.pendingBills = [];  
     }
   }
-  
 
+  downloadReport(): void {
+      const doc = new jsPDF('landscape');
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(18);
+      doc.text('Utility Payment Report', 120, 15);
+      doc.setFontSize(12);
+      doc.setTextColor(100);
+      doc.text(`Generated on: ${new Date().toLocaleString()}`, 120, 22);
+      const tableData = this.pendingBills.map((bill, index) => [
+          index + 1,
+          bill.serviceConnectionNumber,
+          bill.unitsConsumed,
+          `${bill.totalAmount.toFixed(2)}`,
+          new Date(bill.billGeneratedDate).toLocaleDateString(),
+          new Date(bill.dueDate).toLocaleDateString(),
+          bill.isPaid === 'PAID' ? 'PAID' : 'NOT PAID'
+      ]);
+      const columns = ['#', 'Connection No.', 'Units', 'Amount', 'Bill Date', 'Due Date', 'Status'];
+      autoTable(doc, {
+          head: [columns],
+          body: tableData,
+          startY: 30,
+          styles: { fontSize: 10, cellPadding: 6 },
+          headStyles: { fillColor: [46, 204, 113], textColor: 255, fontSize: 12 }, 
+          bodyStyles: { textColor: 50 },
+          alternateRowStyles: { fillColor: [240, 240, 240] }, 
+          columnStyles: {
+              6: { cellWidth: 30, halign: 'center' } 
+          }
+      });
+      doc.save('Utility_Bills_Report.pdf');
+  }
 
   downloadParticularInvoice(invoice: any) {
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
-
-    // Add header image (adjust path as necessary)
     const headerImg = 'assets/header.png';
     doc.addImage(headerImg, 'PNG', 10, 5, pageWidth - 20, 15);
-
-    // Title and meta information
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(20);
     doc.setTextColor(40, 40, 100);
     doc.text('INVOICE', pageWidth / 2, 35, { align: 'center' });
-
     doc.setFontSize(12);
     doc.setTextColor(0, 0, 0);
     doc.text(`Invoice ID: ${invoice.id}`, 14, 45);
     doc.text(`Bill Date: ${new Date(invoice.billGeneratedDate).toLocaleDateString()}`, 14, 55);
     doc.text(`Due Date: ${new Date(invoice.dueDate).toLocaleDateString()}`, 14, 65);
-
-    // Draw a line after the header
     doc.setDrawColor(0);
     doc.line(14, 70, pageWidth - 14, 70);
-
-    // Customer details section
     doc.setFontSize(14);
-    doc.setTextColor(0, 102, 204);  // Blue color
+    doc.setTextColor(0, 102, 204);  
     doc.text('Customer Details', 14, 80);
     doc.setFontSize(12);
-    doc.setTextColor(0, 0, 0);  // Black color
+    doc.setTextColor(0, 0, 0);  
     doc.text(`Service Connection No: ${invoice.serviceConnectionNumber}`, 14, 90);
-
-    // Draw a line after customer details
     doc.setDrawColor(0);
     doc.line(14, 100, pageWidth - 14, 100);
-
-    // Table for invoice details
     const tableColumn = ["Item", "Details"];
     const tableRows = [
       ["Units Consumed", invoice.unitsConsumed],
       ["Total Amount", invoice.totalAmount],
       ["Payment Status", invoice.isPaid ]
     ];
-
     autoTable(doc, {
       startY: 105, 
       head: [tableColumn],
@@ -142,12 +214,8 @@ export class DashboardComponent {
       },
       margin: { top: 10, left: 14, right: 14 },
     });
-
-    // Footer image (adjust path as necessary)
     const footerImg = 'assets/footer.png';
     doc.addImage(footerImg, 'PNG', 10, pageHeight - 30, pageWidth - 20, 20);
-
-    // Save the document as a PDF file with invoice ID as the name
     doc.save(`Invoice_${invoice.id}.pdf`);
   }
 
@@ -181,9 +249,7 @@ export class DashboardComponent {
     }
 
     payBill() {
-
       const discountType = this.isBeforeDueDate ? "beforeDueDate" : this.isAfterDueDate ? "afterDueDate" : "None";  
-
       const paymentData = {
         invoiceId: this.selectedBill?.id,
         amount: this.payAmount,  
@@ -198,6 +264,8 @@ export class DashboardComponent {
             this.resetFormBill();
             this.toastr.success(response.message, 'Success'); 
             this.loadPendingBills();
+            this.loadPayments();
+            this.fetchWalletBalance();
             this.fetchRecentTransactions();
             this.closePaymentModal();
           },
@@ -337,6 +405,8 @@ export class DashboardComponent {
   filteredBills: any[] = [];
   statusFilter: string = 'Not Paid';
   dateFilter: string = 'ALL';
+  notPaidBillCount: number = 0; 
+  notPaidAmount:number =0;
 
   applyFilters() {
     const today = new Date();
@@ -356,6 +426,11 @@ export class DashboardComponent {
       filtered = filtered.filter(bill => new Date(bill.billGeneratedDate) >= sixMonthsAgo);
     }
     this.filteredBills = filtered;
+    this.notPaidBillCount = filtered.filter(bill => bill.isPaid !== 'PAID').length;
+    this.notPaidAmount = filtered
+    .filter(bill => bill.isPaid !== 'PAID')
+    .reduce((sum, bill) => sum + (bill.totalAmount || 0), 0);
+    console.log(`Number of Not Paid Bills: ${this.notPaidBillCount}`);
   }
 
   transactions: any[] = [];
@@ -395,5 +470,106 @@ export class DashboardComponent {
       animationDelay: Math.random() * 0.5 + 's'
     }));
   }
- 
+
+    submitHelpRequest() {
+    if (this.helpForm.valid) {
+      const selectedQuery = this.helpForm.value.queryType;
+      
+      let oldValue = null;
+      let newValue = null;
+
+      if (selectedQuery === 'Change Name') {
+        oldValue = this.helpForm.value.oldName;
+        newValue = this.helpForm.value.newName;
+      } else if (selectedQuery === 'Change Phone Number') {
+        oldValue = this.helpForm.value.oldPhone;
+        newValue = this.helpForm.value.newPhone;
+      } else if (selectedQuery === 'Change Email ID') {
+        oldValue = this.helpForm.value.oldEmail;
+        newValue = this.helpForm.value.newEmail;
+      }
+
+      const helpRequest = {
+        userMail: this.userEmail,
+        query: selectedQuery,
+        oldValue: oldValue,
+        newValue: newValue,
+        status: 'SENT'
+      };
+
+      this.helpService.sendHelpRequest(helpRequest).subscribe(response => {
+        alert('Help request submitted successfully!');
+        this.helpForm.reset();
+      }, error => {
+        alert('Failed to submit help request.');
+      });
+    }
+  }
+
+
+  onQueryChange(): void {
+    const selectedQuery = this.helpForm.get('queryType')?.value;
+    this.helpForm.patchValue({
+      oldName: '',
+      newName: '',
+      oldPhone: '',
+      newPhone: '',
+      oldEmail: '',
+      newEmail: ''
+    });
+    if (selectedQuery === 'Change Name') {
+      this.helpForm.addControl('oldName', new FormControl(''));
+      this.helpForm.addControl('newName', new FormControl(''));
+    } else {
+      this.helpForm.removeControl('oldName');
+      this.helpForm.removeControl('newName');
+    }
+
+    if (selectedQuery === 'Change Phone Number') {
+      this.helpForm.addControl('oldPhone', new FormControl(''));
+      this.helpForm.addControl('newPhone', new FormControl(''));
+    } else {
+      this.helpForm.removeControl('oldPhone');
+      this.helpForm.removeControl('newPhone');
+    }
+
+    if (selectedQuery === 'Change Email ID') {
+      this.helpForm.addControl('oldEmail', new FormControl(''));
+      this.helpForm.addControl('newEmail', new FormControl(''));
+    } else {
+      this.helpForm.removeControl('oldEmail');
+      this.helpForm.removeControl('newEmail');
+    }
+  }
+
+  helpRequests: any[] = [];
+  loadHelpRequests(): void {
+      if(this.userEmail){
+      const userEmail = this.userEmail; 
+      this.helpService.getUserHelpRequests(userEmail).subscribe(
+        (data) => {
+          console.log(data);
+          this.helpRequests = data;
+        },
+        (error) => {
+          console.error('Error fetching help requests:', error);
+        }
+      );
+    }
+  }
+  
+  getStatusClass(status: string): string {
+    switch (status) {
+      case 'SENT':
+        return 'status-sent';
+      case 'RECEIVED':
+        return 'status-received';
+      case 'IN PROGRESS':
+        return 'status-in-progress';
+      case 'COMPLETED':
+        return 'status-completed';
+      default:
+        return '';
+    }
+  }
 }

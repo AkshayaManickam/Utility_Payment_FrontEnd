@@ -4,11 +4,95 @@ body {
     padding: 0;
     background: #f8f9fa;
   }
+
+  #home-section {
+    display: flex;
+    justify-content: center;
+    gap: 1.5rem;
+    padding: 2rem;
+    background: #f5f5f5;
+    border-radius: 15px;
+  }
   
+  #home-section .card {
+    width: 250px;
+    height: 260px;
+    padding: 1.5rem;
+    border-radius: 15px;
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(10px);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    transition: transform 0.4s ease, box-shadow 0.4s ease;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+  }
+  
+  #home-section .card h2 {
+    font-size: 1.4rem;
+    font-weight: 600;
+    margin-bottom: 12px;
+    color: #ffffff;
+  }
+  
+  #home-section .card .icon {
+    font-size: 60px;
+    margin-bottom: 10px;
+    color: white;
+    transition: transform 0.3s ease-in-out;
+  }
+  
+  #home-section .card:hover .icon {
+    transform: scale(1.2);
+  }
+  
+  #home-section .traffic {
+    background: linear-gradient(135deg, #ffcc00, #ff9900);
+  }
+  
+  #home-section .default-card {
+    background: linear-gradient(135deg, #00d0ff, #008cff);
+  }
+  
+  #home-section .report-card {
+    background: linear-gradient(135deg, #4caf50, #2e7d32);
+  }
+  
+  #home-section .report-btn {
+    background-color: rgba(255, 255, 255, 0.2);
+    padding: 0.75rem 1.5rem;
+    border-radius: 10px;
+    font-weight: bold;
+    color: white;
+    font-size: 1.1rem;
+    transition: background 0.3s ease;
+    border: none;
+  }
+  
+  #home-section .report-btn:hover {
+    background-color: rgba(255, 255, 255, 0.4);
+  }
+
+  #home-section .report-card p{
+    color: white;
+    font-size: 17px;
+  }
+   
   .dashboard {
     display: flex;
   }
-  
+
+  .media-container {
+    display: flex;
+    justify-content: flex-start;
+    align-items: flex-start;
+    gap: 15px;
+    margin-bottom: 20px;
+  }
+    
   .sidebar {
     width: 250px;
     background: #001f73;
@@ -423,6 +507,7 @@ button:hover {
   justify-content: center;
   align-items: center;
   height: 80vh;
+  border-radius: 20px;
   background: linear-gradient(135deg, #f4f4f4, #e3eafc);
 }
 
@@ -437,7 +522,7 @@ button:hover {
 }
 
 .wallet-card {
-  background: linear-gradient(135deg, #ff9966, #ff5e62);
+  background: linear-gradient(135deg, #001f73, #001f73);
   color: white;
   padding: 20px;
   border-radius: 15px;
@@ -488,3 +573,103 @@ button:hover {
   background: #0056b3;
   transform: scale(1.05);
 }
+
+.help-container {
+  max-width: 500px;
+  margin: 20px auto;
+  padding: 20px;
+  background: #f9f9f9;
+  border-radius: 10px;
+  box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+  text-align: center;
+}
+
+.help-container h2 {
+  color: #333;
+  margin-bottom: 15px;
+}
+
+.help-form .form-group {
+  margin-bottom: 15px;
+  text-align: left;
+}
+
+.help-form label {
+  font-weight: bold;
+  color: #555;
+}
+
+.help-form .form-control {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  font-size: 14px;
+}
+
+.help-form select {
+  cursor: pointer;
+}
+
+.help-btn {
+  width: 100%;
+  padding: 10px;
+  background: #001f73;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: background 0.3s ease-in-out;
+}
+
+.help-btn:hover {
+  background: #001f73;
+}
+
+.help-table-container {
+  margin-top: 20px;
+}
+
+.help-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+}
+
+.help-table th, .help-table td {
+  border: 1px solid #ddd;
+  padding: 8px;
+  text-align: left;
+}
+
+.help-table th {
+  background-color: #f4f4f4;
+}
+
+.status-sent {
+  color: orange;
+  font-weight: bold;
+}
+
+.status-received {
+  color: blue;
+  font-weight: bold;
+}
+
+.status-in-progress {
+  color: purple;
+  font-weight: bold;
+}
+
+.status-completed {
+  color: green;
+  font-weight: bold;
+}
+
+
+
+
+
+
+
