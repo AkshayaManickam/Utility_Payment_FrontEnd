@@ -66,6 +66,7 @@ export class LoginComponent {
         if (response.valid) {
           this.toastr.success('Login successful!', 'Success');
           localStorage.setItem('isLoggedIn', 'true');
+          localStorage.setItem('authToken', 'true'); // instead of isLoggedIn
           localStorage.setItem('userId', response.userId); // Assuming response contains userId
           console.log('User ID set in localStorage:', response.userId);  // Log the userId to confirm it
           localStorage.setItem('userEmail', this.email);

@@ -130,37 +130,49 @@ export class DashboardComponent {
   }
 
   downloadReport(): void {
-      const doc = new jsPDF('landscape');
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(18);
-      doc.text('Utility Payment Report', 120, 15);
-      doc.setFontSize(12);
-      doc.setTextColor(100);
-      doc.text(`Generated on: ${new Date().toLocaleString()}`, 120, 22);
+    const doc = new jsPDF('landscape');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(18);
+    doc.text('Utility Payment Report', 120, 15, { align: 'center' });
+  
+    doc.setFontSize(12);
+    doc.setTextColor(100);
+    doc.text(`Generated on: ${new Date().toLocaleString()}`, 120, 22, { align: 'center' });
+  
+    if (this.pendingBills.length === 0) {
+      doc.setFontSize(14);
+      doc.setTextColor(150, 0, 0); // Red color
+      doc.text('No records to display.', 140, 50, { align: 'center' });
+    } else {
       const tableData = this.pendingBills.map((bill, index) => [
-          index + 1,
-          bill.serviceConnectionNumber,
-          bill.unitsConsumed,
-          `${bill.totalAmount.toFixed(2)}`,
-          new Date(bill.billGeneratedDate).toLocaleDateString(),
-          new Date(bill.dueDate).toLocaleDateString(),
-          bill.isPaid === 'PAID' ? 'PAID' : 'NOT PAID'
+        index + 1,
+        bill.serviceConnectionNumber,
+        bill.unitsConsumed,
+        `${bill.totalAmount.toFixed(2)}`,
+        new Date(bill.billGeneratedDate).toLocaleDateString(),
+        new Date(bill.dueDate).toLocaleDateString(),
+        bill.isPaid === 'PAID' ? 'PAID' : 'NOT PAID'
       ]);
+  
       const columns = ['#', 'Connection No.', 'Units', 'Amount', 'Bill Date', 'Due Date', 'Status'];
+  
       autoTable(doc, {
-          head: [columns],
-          body: tableData,
-          startY: 30,
-          styles: { fontSize: 10, cellPadding: 6 },
-          headStyles: { fillColor: [46, 204, 113], textColor: 255, fontSize: 12 }, 
-          bodyStyles: { textColor: 50 },
-          alternateRowStyles: { fillColor: [240, 240, 240] }, 
-          columnStyles: {
-              6: { cellWidth: 30, halign: 'center' } 
-          }
+        head: [columns],
+        body: tableData,
+        startY: 30,
+        styles: { fontSize: 10, cellPadding: 6 },
+        headStyles: { fillColor: [46, 204, 113], textColor: 255, fontSize: 12 }, 
+        bodyStyles: { textColor: 50 },
+        alternateRowStyles: { fillColor: [240, 240, 240] },
+        columnStyles: {
+          6: { cellWidth: 30, halign: 'center' } 
+        }
       });
-      doc.save('Utility_Bills_Report.pdf');
+    }
+  
+    doc.save('Utility_Bills_Report.pdf');
   }
+  
 
   downloadParticularInvoice(invoice: any) {
     const doc = new jsPDF();
@@ -460,24 +472,13 @@ export class DashboardComponent {
     }
   }
 
-  sparkles: any[] = [];
-
-  createSparkles() {
-    this.sparkles = Array.from({ length: 20 }).map((_, i) => ({
-      id: i,
-      left: Math.random() * 100 + '%',
-      top: Math.random() * 50 + 'px',
-      animationDelay: Math.random() * 0.5 + 's'
-    }));
-  }
-
-    submitHelpRequest() {
+  submitHelpRequest() {
     if (this.helpForm.valid) {
       const selectedQuery = this.helpForm.value.queryType;
-      
+  
       let oldValue = null;
       let newValue = null;
-
+  
       if (selectedQuery === 'Change Name') {
         oldValue = this.helpForm.value.oldName;
         newValue = this.helpForm.value.newName;
@@ -488,7 +489,7 @@ export class DashboardComponent {
         oldValue = this.helpForm.value.oldEmail;
         newValue = this.helpForm.value.newEmail;
       }
-
+  
       const helpRequest = {
         userMail: this.userEmail,
         query: selectedQuery,
@@ -496,15 +497,20 @@ export class DashboardComponent {
         newValue: newValue,
         status: 'SENT'
       };
-
-      this.helpService.sendHelpRequest(helpRequest).subscribe(response => {
-        alert('Help request submitted successfully!');
-        this.helpForm.reset();
-      }, error => {
-        alert('Failed to submit help request.');
+  
+      this.helpService.sendHelpRequest(helpRequest).subscribe({
+        next: response => {
+          this.toastr.success('Help request submitted successfully!', 'Success');
+          this.loadHelpRequests();
+          this.helpForm.reset();
+        },
+        error: err => {
+          this.toastr.error('Failed to submit help request.', 'Error');
+        }
       });
     }
   }
+  
 
 
   onQueryChange(): void {
@@ -564,7 +570,7 @@ export class DashboardComponent {
         return 'status-sent';
       case 'RECEIVED':
         return 'status-received';
-      case 'IN PROGRESS':
+      case 'IN_PROGRESS':
         return 'status-in-progress';
       case 'COMPLETED':
         return 'status-completed';
