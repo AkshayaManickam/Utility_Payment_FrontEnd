@@ -16,6 +16,8 @@
     </aside>
   
     <main class="content">
+
+        <h2 style="font-size: 14px;float: right;color:#001f73;">Welcome {{this.userEmail}} ,</h2><br><br>
         <header class="topbar">       
             <a href="#" class="pro-version" style="color:#001f73;">BBC UBP Official Dashboard</a>
             <div class="profile-icon"></div>
@@ -120,11 +122,9 @@
                         </div>
                         <div class="modal-body" *ngIf="selectedBill">
                             <div class="modal-layout">
-                                <!-- Left: Payment Summary -->
                                 <div class="modal-left">
                                     <p><strong style="color:#001f73;">Invoice ID:</strong> {{selectedBill.id}}</p>
                                     <p><strong style="color:#001f73;">Total Amount:</strong> ₹ {{selectedBill.totalAmount}}</p>
-
                                     <div *ngIf="isBeforeDueDate">
                                         <p><strong style="color:#001f73;">Discount (10%) applied:</strong> -{{discount}}</p>
                                         <p><strong style="color:#001f73;">Fee Type:</strong> Discount</p>
@@ -133,11 +133,8 @@
                                         <p><strong style="color:#001f73;">Late Fee (5%) applied:</strong> + ₹ {{lateFee}}</p>
                                         <p><strong style="color:#001f73;">Fee Type:</strong> Late Fee</p>
                                     </div>
-
                                     <p><strong style="color:#001f73;">Amount to Pay:</strong> ₹ {{payAmount }}</p>
                                 </div>
-
-                                <!-- Right: Payment Form -->
                                 <div class="modal-right">
                                     <label for="paymentMethod" style="color:#001f73;">Select Payment Method:</label>
                                     <select id="paymentMethod" [(ngModel)]="selectedPaymentMethod" (change)="onPaymentMethodChange()">
@@ -208,7 +205,6 @@
                 <h2>Wallet Balance</h2>
                 <p class="balance">₹{{ walletBalance }}</p>
                 </div>
-                
 
                 <!-- Recent Transactions -->
                 <div class="transactions">

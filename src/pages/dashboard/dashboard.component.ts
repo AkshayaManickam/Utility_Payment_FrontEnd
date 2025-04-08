@@ -366,7 +366,7 @@ export class DashboardComponent {
     payments: Payment[] = [];
     searchQuery: string = '';
     currentPage: number = 0;
-    itemsPerPage: number = 5;
+    itemsPerPage: number = 4;
     totalPages: number = 0;
 
     loadPayments(): void {
