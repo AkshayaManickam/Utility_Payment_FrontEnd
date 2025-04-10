@@ -23,33 +23,62 @@
             <div class="profile-icon"></div>
         </header><br>
   
-        <section id="home-section" *ngIf="activeTab === 'home'">
-            <!-- Units Consumption -->
-            <div class="card traffic">
-                <h2>Units Consumption</h2>
-                <i class="bi bi-activity icon"></i>
-                <strong>{{ unitsConsumed }}</strong>
-            </div>
+        <section  *ngIf="activeTab === 'home'">
+             <div id="home-section">
+
+                <!-- Units Consumption -->
+                <div class="card traffic">
+                    <h2>Units Consumption</h2>
+                    <i class="bi bi-activity icon"></i>
+                    <strong>{{ unitsConsumed }}</strong>
+                </div>
+                
+                <!-- Pending Bills -->
+                <div class="card default-card">
+                    <h2>Pending Bills</h2>
+                    <i class="bi bi-receipt icon"></i>
+                    <strong>{{ notPaidBillCount }}</strong>
+                </div>
+                
+                <!-- Amount Debited -->
+                <div class="card default-card">
+                    <h2>Amount to pay</h2>
+                    <i class="bi bi-cash-coin icon"></i>
+                    <strong>{{ notPaidAmount }}</strong>
+                </div>
             
-            <!-- Pending Bills -->
-            <div class="card default-card">
-                <h2>Pending Bills</h2>
-                <i class="bi bi-receipt icon"></i>
-                <strong>{{ notPaidBillCount }}</strong>
+                <!-- Download Report -->
+                <div class="card report-card">
+                    <p>Download your History</p>
+                    <button class="report-btn" (click)="downloadReport()">Download Report</button>
+                </div>
+             </div>
+
+            <!-- Pending Bill Notification -->
+            <div *ngIf="notPaidBillCount > 0" class="alert alert-warning alert-dismissible fade show mt-4 shadow p-3" role="alert">
+                <div class="d-flex align-items-center">
+                <i class="bi bi-exclamation-triangle-fill me-3 fs-4 text-warning"></i>
+                <div>
+                    <strong>You have {{ notPaidBillCount }} pending bill{{ notPaidBillCount > 1 ? 's' : '' }}!</strong><br>
+                    Total due amount: <strong>₹{{ notPaidAmount }}</strong>
+                </div>
+                </div>
+                <button type="button" class="btn-close custom-close" data-bs-dismiss="alert" aria-label="Close">
+                    <i class="bi bi-x-lg text-danger fs-6"></i>
+                </button>
             </div>
-            
-            <!-- Amount Debited -->
-            <div class="card default-card">
-                <h2>Amount to pay</h2>
-                <i class="bi bi-cash-coin icon"></i>
-                <strong>{{ notPaidAmount }}</strong>
+            <div *ngIf="notPaidBillCount === 0" class="alert alert-warning alert-dismissible fade show mt-4 shadow p-3" role="alert">
+                <div class="d-flex align-items-center">
+                <i class="bi bi-exclamation-triangle-fill me-3 fs-4 text-warning"></i>
+                <div>
+                    <strong>You're all caught up! Nothing to pay at the moment.</strong><br>
+                </div>
+                </div>
+                <button type="button" class="btn-close custom-close" data-bs-dismiss="alert" aria-label="Close">
+                    <i class="bi bi-x-lg text-danger fs-6"></i>
+                </button>
             </div>
-        
-            <!-- Download Report -->
-            <div class="card report-card">
-                <p>Download your History</p>
-                <button class="report-btn" (click)="downloadReport()">Download Report</button>
-            </div>
+
         </section>
         
         <div *ngIf="activeTab === 'bills'">
@@ -59,7 +88,9 @@
                     <select id="statusFilter" class="form-select" [(ngModel)]="statusFilter" (change)="applyFilters()">
                         <option value="ALL">View All</option>
                         <option value="PAID">Paid</option>
-                        <option value="Not Paid">Not Paid</option>
+                        <option value="OVERDUE">Over Due</option>
+                        <option value="NOT PAID">Not Paid</option>
+                        <option value="EXCEPTION">Exception</option>
                     </select>
                 </div>
     
@@ -73,8 +104,11 @@
                 </div>
             </div>
             <div class="container mt-4">
-                <div *ngIf="pendingBills.length === 0" class="text-center">
+                <div *ngIf="pendingBills.length === 0 && statusFilter === 'NOT PAID'" class="text-center">
                     <h4 class="text-muted">No Bills to Pay</h4>
+                </div>
+                <div *ngIf="pendingBills.length === 0 && statusFilter === 'PAID'" class="text-center">
+                    <h4 class="text-muted">No payments made yet</h4>
                 </div>
                 <div class="row justify-content-center">
                     <div class="col-lg-4 col-md-6 col-sm-12" *ngFor="let bill of filteredBills">
@@ -91,16 +125,22 @@
                                     <li><strong>Due Date: </strong> {{ bill.dueDate | date }}</li><br>
                                     <li>
                                         <strong>Status: </strong> 
-                                        <span class="badge" [ngClass]="bill.isPaid === 'PAID' ? 'badge-success' : 'badge-danger'">
-                                            {{ bill.isPaid }}
+                                        <span class="badge" 
+                                              [ngClass]="{
+                                                'badge-success': bill.isPaid === 'PAID',
+                                                'badge-danger': bill.isPaid === 'NOT PAID',
+                                                'badge-warning': bill.isPaid === 'OVERDUE',
+                                                'badge-purple': bill.isPaid === 'EXCEPTION'
+                                              }">
+                                          {{ bill.isPaid }}
                                         </span>
-                                    </li>                                    
+                                      </li>                                                                        
                                 </ul>
                             </div>
                             <div class="card-footer d-flex justify-content-between">
                                 <button class="btn btn-primary btn-sm pay-btn" 
                                         (click)="openPaymentModal(bill)" 
-                                        [disabled]="bill.isPaid === 'PAID'">
+                                        [disabled]="bill.isPaid === 'PAID' || bill.isPaid ==='EXCEPTION'">
                                     <i class="bi bi-credit-card"></i> Pay Now
                                 </button>
                                 <button class="btn btn-outline-dark btn-sm download-btn" 
@@ -169,8 +209,12 @@
             <div class="top-controls">
               <input type="text" [(ngModel)]="searchQuery" placeholder="Search Payments..." class="search-bar" />
             </div><br>
+
+            <div *ngIf="getFilteredPayments.length === 0">
+                No payments yet
+            </div>
           
-            <table class="user-table">
+            <table class="user-table" *ngIf="getFilteredPayments.length > 0">
               <thead>
                 <tr>
                   <th>Payment ID</th>
@@ -191,7 +235,7 @@
               </tbody>
             </table><br>
           
-            <div class="pagination-controls">
+            <div class="pagination-controls" *ngIf="getFilteredPayments.length > 0">
               <button (click)="changePage(currentPage - 1)" [disabled]="currentPage === 0">Previous</button>
               <span>Page {{ currentPage + 1 }} of {{ totalPages }}</span>
               <button (click)="changePage(currentPage + 1)" [disabled]="currentPage >= totalPages - 1">Next</button>
@@ -204,8 +248,41 @@
                 <div class="wallet-card">
                 <h2>Wallet Balance</h2>
                 <p class="balance">₹{{ walletBalance }}</p>
+                <button class="wallet-add btn btn-primary" data-bs-toggle="modal" data-bs-target="#addMoneyModal" (click)="openModal()">
+                    Add Money
+                </button>
                 </div>
 
+                <!-- Modal -->
+                <div class="custom-modal" *ngIf="showModal">
+                    <div class="custom-modal-backdrop" (click)="closeModal()"></div>
+                    <div class="custom-modal-content shadow-lg">
+                    <div class="custom-modal-header d-flex justify-content-between align-items-center">
+                        <h5 class="modal-title">Confirm Password</h5>
+                    </div>
+                
+                    <div class="custom-modal-body">
+                        <form #moneyForm="ngForm">
+                        <div class="mb-3">
+                            <label for="amount" class="form-label">Amount</label>
+                            <input type="number" class="form-control" id="amount" [(ngModel)]="addAmount" name="amount" required />
+                        </div>
+                
+                        <div class="mb-3">
+                            <label for="password" class="form-label">Enter Password</label>
+                            <input type="password" class="form-control" id="password" [(ngModel)]="passwordInput" name="password" required />
+                        </div>
+                        </form>
+                        <div *ngIf="passwordError" class="text-danger mt-2">Incorrect password. Please try again.</div>
+                    </div>
+                
+                    <div class="custom-modal-footer text-end mt-3">
+                        <button class="btn btn-secondary me-2" (click)="closeModal()">Cancel</button>
+                        <button class="btn btn-success" (click)="confirmAddMoney()">Confirm</button>
+                    </div>
+                    </div>
+                </div>
+  
                 <!-- Recent Transactions -->
                 <div class="transactions">
                     <h3>Recent Transactions</h3>
@@ -227,15 +304,18 @@
         </div>
 
         <div *ngIf="activeTab === 'help'">
+            <button class="btn btn-info my-3" (click)="toggleHistory()" style="background-color: #001f73;color: white;float: right;">
+                {{ showHistory ? 'Hide History' : 'Show History' }}
+            </button><br>
             <div class="help-container">
-                <h2>We're Here to Help!</h2>
+                <h2 style="font-size: 14px;">We're Here to Help!</h2>
                 <form [formGroup]="helpForm" (ngSubmit)="submitHelpRequest()" class="help-form">
                     <!-- User Email -->
                     <div class="form-group">
                         <label for="email">Your Email:</label>
                         <input type="email" id="email" class="form-control" formControlName="userEmail" readonly />
                     </div>
-            
+           
                     <!-- Query Type Selection -->
                     <div class="form-group">
                         <label for="query">Select Your Query:</label>
@@ -245,6 +325,7 @@
                             <option value="Mistake in units consumption">Mistake in Units Consumption</option>
                             <option value="Change Phone Number">Change Phone Number</option>
                             <option value="Change Email ID">Change Email ID</option>
+                            <option value="waive off">Waive Off</option>
                         </select>
                     </div>
             
@@ -274,11 +355,65 @@
                         <label for="newEmail">New Email:</label>
                         <input type="text" id="newEmail" class="form-control" formControlName="newEmail" />
                     </div>
+
+                    <!-- Description -->
+                    <div class="form-group">
+                        <label for="description">Description:</label>
+                        <textarea id="description" rows="3" class="form-control" formControlName="description"
+                                placeholder="Explain your issue here..."></textarea>
+                    </div>
             
                     <button type="submit" class="help-btn">Submit Request</button>
                 </form>
             </div>
-            <div class="help-table-container" *ngIf="helpRequests.length > 0">
+
+            <!-- Overlay -->
+            <div class="history-modal-backdrop" *ngIf="showHistory" (click)="toggleHistory()"></div>
+  
+            <!-- Modal -->
+            <div class="history-modal-wrapper" *ngIf="showHistory">
+                <div class="history-modal">
+                <div class="history-modal-header">
+                    <h2>History</h2>
+                    <button class="history-close-btn" (click)="toggleHistory()">×</button>
+                </div>
+            
+                <div *ngIf="helpRequests.length === 0" class="history-no-data">
+                    No requests found.
+                </div>
+            
+                <div *ngIf="helpRequests.length > 0" class="history-table-container">
+                    <table class="history-table">
+                    <thead>
+                        <tr>
+                        <th>ID</th>
+                        <th>Email</th>
+                        <th>Query Type</th>
+                        <th>Old Value</th>
+                        <th>New Value</th>
+                        <th>Description</th>
+                        <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr *ngFor="let request of helpRequests">
+                        <td>{{ request.id }}</td>
+                        <td>{{ request.userMail }}</td>
+                        <td>{{ request.query }}</td>
+                        <td>{{ request.oldValue || 'N/A' }}</td>
+                        <td>{{ request.newValue || 'N/A' }}</td>
+                        <td>{{ request.description }}</td>
+                        <td [ngClass]="getStatusClass(request.status)">
+                            {{ request.status }}
+                        </td>
+                        </tr>
+                    </tbody>
+                    </table>
+                </div>
+                </div>
+            </div>
+  
+            <!-- <div class="help-table-container" *ngIf="helpRequests.length > 0">
                 <h2 style="color: #001f73;font-family: 'Franklin Gothic Medium', 'Arial Narrow', Arial, sans-serif;">History</h2>
                 <table class="help-table">
                     <thead>
@@ -288,6 +423,7 @@
                             <th>Query Type</th>
                             <th>Old Value</th>
                             <th>New Value</th>
+                            <th>Description</th>
                             <th>Status</th>
                         </tr>
                     </thead>
@@ -298,11 +434,12 @@
                             <td>{{ request.query }}</td>
                             <td>{{ request.oldValue || 'N/A' }}</td>
                             <td>{{ request.newValue || 'N/A' }}</td>
+                            <td>{{ request.description }}</td>
                             <td [ngClass]="getStatusClass(request.status)">{{ request.status }}</td>
                         </tr>
                     </tbody>
                 </table>
-            </div>
+            </div> -->
         </div>     
     </main>    
   </div>

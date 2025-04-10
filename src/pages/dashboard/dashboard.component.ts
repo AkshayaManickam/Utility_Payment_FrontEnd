@@ -72,7 +72,8 @@ export class DashboardComponent {
       oldPhone: new FormControl(''),
       newPhone: new FormControl(''),
       oldEmail: new FormControl(''),
-      newEmail: new FormControl('')
+      newEmail: new FormControl(''),
+      description: ['', Validators.required]
     });
 
     if (this.userEmail) {
@@ -302,17 +303,6 @@ export class DashboardComponent {
       this.cvv = '';
     }
 
-    generateCrashCard() {
-      const crashCardOffers = [
-          { offer: "₹50 Cashback on Next Payment", discount: 50, validity: "7 Days" },
-          { offer: "10% Off on Next Recharge", discount: 10, validity: "5 Days" },
-          { offer: "Free ₹100 Shopping Voucher", discount: 100, validity: "7 Days" },
-          { offer: "1-Month Free Subscription", discount: 0, validity: "30 Days" }
-      ];
-  
-      return crashCardOffers[Math.floor(Math.random() * crashCardOffers.length)];
-    }
-
     closeSuccessModal() {
       this.showSuccessModal = false;
     }
@@ -415,7 +405,7 @@ export class DashboardComponent {
 
   
   filteredBills: any[] = [];
-  statusFilter: string = 'Not Paid';
+  statusFilter: string = 'NOT PAID';
   dateFilter: string = 'ALL';
   notPaidBillCount: number = 0; 
   notPaidAmount:number =0;
@@ -425,9 +415,16 @@ export class DashboardComponent {
     let filtered = [...this.pendingBills];
     if (this.statusFilter === 'PAID') {
       filtered = filtered.filter(bill => bill.isPaid === 'PAID');
-    } else if (this.statusFilter === 'Not Paid') {
-      filtered = filtered.filter(bill => bill.isPaid !== 'PAID');
+    } else if (this.statusFilter === 'NOT PAID') {
+      filtered = filtered.filter(bill => bill.isPaid !== 'PAID' && bill.isPaid !== 'OVERDUE' && bill.isPaid !== 'EXCEPTION');
     }
+    else if(this.statusFilter === 'OVERDUE') {
+      filtered = filtered.filter(bill => bill.isPaid === 'OVERDUE');
+    }
+    else if(this.statusFilter === 'EXCEPTION') {
+      filtered = filtered.filter(bill => bill.isPaid === 'EXCEPTION');
+    }
+
     if (this.dateFilter === '3M') {
       const threeMonthsAgo = new Date();
       threeMonthsAgo.setMonth(today.getMonth() - 3);
@@ -475,7 +472,6 @@ export class DashboardComponent {
   submitHelpRequest() {
     if (this.helpForm.valid) {
       const selectedQuery = this.helpForm.value.queryType;
-  
       let oldValue = null;
       let newValue = null;
   
@@ -495,9 +491,12 @@ export class DashboardComponent {
         query: selectedQuery,
         oldValue: oldValue,
         newValue: newValue,
+        description: this.helpForm.value.description,
         status: 'SENT'
       };
-  
+
+      console.log(helpRequest);
+
       this.helpService.sendHelpRequest(helpRequest).subscribe({
         next: response => {
           this.toastr.success('Help request submitted successfully!', 'Success');
@@ -574,8 +573,52 @@ export class DashboardComponent {
         return 'status-in-progress';
       case 'COMPLETED':
         return 'status-completed';
+        case 'DECLINED':
+          return 'status-declined';
       default:
         return '';
     }
   }
+
+  showModal: boolean = false;
+  addAmount: number = 0;
+  passwordInput: string = '';
+  passwordError: boolean = false;
+  
+  openModal() {
+    this.showModal = true;
+    this.passwordInput = '';
+    this.passwordError = false;
+  }
+  
+  closeModal() {
+    this.showModal = false;
+  }
+  
+  confirmAddMoney() {
+    if (this.passwordInput === 'mockpass' && this.userEmail) {
+      this.userService.addMoneyToWallet(this.userEmail, this.addAmount).subscribe({
+        next: (res) => {
+          this.walletBalance += this.addAmount;  // Optional: Or refetch from backend
+          this.closeModal();
+          this.addAmount = 0;
+          this.passwordInput = '';
+          this.passwordError = false;
+          alert('Amount added successfully!');
+        },
+        error: (err) => {
+          alert('Failed to add money: ' + err.error);
+        }
+      });
+    } else {
+      this.passwordError = true;
+    }
+  }
+  
+  showHistory: boolean = false;
+
+  toggleHistory() {
+    this.showHistory = !this.showHistory;
+  }
+
 }

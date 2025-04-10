@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { catchError, Observable, throwError } from 'rxjs';
 
 @Injectable({
@@ -18,5 +18,13 @@ export class UserService {
           return throwError(() => new Error('Failed to fetch consumption data.'));
         })
       );
+  }
+
+  addMoneyToWallet(email: string, amount: number) {
+    const params = new HttpParams()
+      .set('email', email)
+      .set('amount', amount);
+
+    return this.http.post(`${this.apiUrl}/add-money`, {}, { params, responseType: 'text' });
   }
 }
