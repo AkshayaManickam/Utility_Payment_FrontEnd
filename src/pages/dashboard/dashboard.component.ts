@@ -193,7 +193,7 @@ export class DashboardComponent {
     doc.setDrawColor(0);
     doc.line(14, 70, pageWidth - 14, 70);
     doc.setFontSize(14);
-    doc.setTextColor(0, 102, 204);  
+    doc.setTextColor(0, 31, 115);  
     doc.text('Customer Details', 14, 80);
     doc.setFontSize(12);
     doc.setTextColor(0, 0, 0);  
@@ -212,7 +212,7 @@ export class DashboardComponent {
       body: tableRows,
       theme: 'grid',
       headStyles: {
-        fillColor: [0, 102, 204], 
+        fillColor: [0, 31, 115], 
         textColor: [255, 255, 255], 
         fontSize: 12,
         fontStyle: 'bold',
@@ -599,15 +599,15 @@ export class DashboardComponent {
     if (this.passwordInput === 'mockpass' && this.userEmail) {
       this.userService.addMoneyToWallet(this.userEmail, this.addAmount).subscribe({
         next: (res) => {
-          this.walletBalance += this.addAmount;  // Optional: Or refetch from backend
+          this.walletBalance += this.addAmount;  
           this.closeModal();
           this.addAmount = 0;
           this.passwordInput = '';
           this.passwordError = false;
-          alert('Amount added successfully!');
+          this.toastr.success('Amount added successfully!');
         },
         error: (err) => {
-          alert('Failed to add money: ' + err.error);
+          this.toastr.error('Failed to add money');
         }
       });
     } else {
