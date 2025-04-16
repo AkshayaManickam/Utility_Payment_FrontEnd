@@ -8,7 +8,7 @@ import { FormBuilder, FormControl, FormGroup, FormsModule, ReactiveFormsModule, 
 import { PaymentService } from '../../services/payment.service';
 import { DiscountService } from '../../services/discount.service';
 import { ToastrModule, ToastrService } from 'ngx-toastr';
-import { Payment } from '../../models/Payment';
+import { Transaction } from '../../models/Payment';
 import { WalletService } from '../../services/wallet.service';
 import { Chart } from 'chart.js/auto';
 import { Router } from '@angular/router';
@@ -353,7 +353,7 @@ export class DashboardComponent {
       }
     }
 
-    payments: Payment[] = [];
+    payments: Transaction[] = [];
     searchQuery: string = '';
     currentPage: number = 0;
     itemsPerPage: number = 4;
@@ -369,17 +369,17 @@ export class DashboardComponent {
       }
     }
   
-    getFilteredPayments(): Payment[] {
+    getFilteredPayments(): Transaction[] {
       let filteredPayments = this.payments.filter(payment =>
-        payment.id?.toString().includes(this.searchQuery) ||
+        payment.transactionId.toString().includes(this.searchQuery) ||
         (payment.invoice?.id ? payment.invoice.id.toString().includes(this.searchQuery) : false) ||
         payment.paymentMethod.toLowerCase().includes(this.searchQuery.toLowerCase())
       );
-    
+  
       return filteredPayments.slice(this.currentPage * this.itemsPerPage, (this.currentPage + 1) * this.itemsPerPage);
     }
-    
   
+    
     changePage(newPage: number): void {
       if (newPage >= 0 && newPage < this.totalPages) {
         this.currentPage = newPage;
@@ -450,10 +450,10 @@ export class DashboardComponent {
         (data) => {
           console.log('wallet');
           console.log(data);
-          this.transactions = data.map((payment: Payment) => ({
+          this.transactions = data.map((payment: Transaction) => ({
             description: `Payment via ${payment.paymentMethod}`,
-            amount: payment.amount,
-            date: new Date(payment.paymentDate).toLocaleDateString('en-IN', {
+            amount: payment.amountPaid,
+            date: new Date(payment.transactionDate).toLocaleDateString('en-IN', {
               day: '2-digit',
               month: 'short',
               year: 'numeric',
@@ -621,4 +621,90 @@ export class DashboardComponent {
     this.showHistory = !this.showHistory;
   }
 
+  generatePDFBill(payment: Transaction): void {
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const footerImage = 'assets/footer.png';
+    const brandColor: [number, number, number] = [0, 31, 115]; // #001f73
+    const lightBlue: [number, number, number] = [235, 241, 255];
+    const loadImage = (url: string): Promise<string> => {
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.crossOrigin = '';
+        img.src = url;
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          canvas.width = img.width;
+          canvas.height = img.height;
+          canvas.getContext('2d')?.drawImage(img, 0, 0);
+          resolve(canvas.toDataURL('image/png'));
+        };
+        img.onerror = reject;
+      });
+    };
+    loadImage(footerImage).then((footerData) => {
+      doc.setFontSize(22);
+      doc.setTextColor(...brandColor);
+      doc.setFont('helvetica', 'bold');
+      doc.text('BCC OPERATIONAL', pageWidth / 2, 20, { align: 'center' });
+      doc.setDrawColor(...brandColor);
+      doc.setLineWidth(0.5);
+      doc.line(14, 25, pageWidth - 14, 25);
+      doc.setFontSize(12);
+      doc.setTextColor(0, 0, 0);
+      doc.setDrawColor(180);
+      doc.setLineWidth(0.1);
+      doc.rect(14, 30, pageWidth - 28, 30);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`Invoice ID: ${payment.invoice?.id || 'N/A'}`, 18, 38);
+      doc.text(`Date: ${new Date(payment.transactionDate).toLocaleDateString('en-IN', {
+        day: '2-digit', month: 'short', year: 'numeric'
+      })}`, pageWidth / 2 + 2, 38);
+      doc.text(`Service Connection No: ${payment.invoice?.serviceConnectionNumber || 'N/A'}`, 18, 46);
+      doc.text(`Bill Generated On: ${new Date(payment.invoice?.billGeneratedDate).toLocaleDateString('en-IN')}`, pageWidth / 2 + 2, 46);
+      doc.text(`Units Consumed: ${payment.invoice?.unitsConsumed ?? 'N/A'}`, 18, 54);
+      let finalY = 66;
+      autoTable(doc, {
+        startY: finalY,
+        head: [['Description', 'Details']],
+        body: [
+          ['Total Amount', payment.totalAmount.toFixed(2)],
+          ['Discount Type', payment.discountType || 'N/A'],
+          ['Amount Paid', payment.amountPaid.toFixed(2)],
+          ['Payment Method', payment.paymentMethod],
+          ['Transaction Status', payment.transactionStatus],
+        ],
+        theme: 'grid',
+        headStyles: {
+          fillColor: brandColor,
+          textColor: 255,
+          fontStyle: 'bold',
+        },
+        bodyStyles: {
+          fontSize: 11,
+          textColor: [50, 50, 50],
+        },
+        alternateRowStyles: {
+          fillColor: lightBlue,
+        },
+        styles: {
+          halign: 'left',
+          valign: 'middle',
+          cellPadding: 3,
+        },
+        didDrawPage: (data) => {
+          if (data.cursor) {
+            finalY = data.cursor.y;
+          }
+        }
+      });
+      doc.setFontSize(16);
+      doc.setTextColor(0, 128, 0);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Thank you for your payment!', pageWidth / 2, finalY + 20, { align: 'center' });
+      doc.addImage(footerData, 'PNG', 10, 270, pageWidth - 20, 20);
+      doc.save(`Receipt_Invoice_${payment.invoice?.id || 'N/A'}.pdf`);
+    });
+  }
+  
 }

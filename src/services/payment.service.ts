@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { Payment } from '../models/Payment';
+import { Transaction } from '../models/Payment';
 
 @Injectable({
   providedIn: 'root'
@@ -15,9 +15,9 @@ export class PaymentService {
     return this.http.post(`${this.apiUrl}/pay`, paymentData);
   }
 
-  getAllPayments(userEmail: string): Observable<Payment[]> {
+  getAllPayments(userEmail: string): Observable<Transaction[]> {
     let params = new HttpParams().set('email', userEmail);
-    return this.http.get<Payment[]>(`${this.apiUrl}/user`, { params });
+    return this.http.get<Transaction[]>(`${this.apiUrl}/user`, { params });
   }
 
   getWalletTransactions(userEmail: string): Observable<any> {

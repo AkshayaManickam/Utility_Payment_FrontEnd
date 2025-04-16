@@ -215,26 +215,33 @@
             </div>
           
             <table class="user-table" *ngIf="payments.length > 0">
-              <thead>
-                <tr>
-                  <th>Invoice ID</th>
-                  <!-- <th>Payment ID</th> -->
-                  <th>Amount (₹)</th>
-                  <th>Payment Date</th>
-                  <th>Payment Method</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr *ngFor="let payment of getFilteredPayments()">
-                  <td>{{ payment.invoice?.id || 'N/A' }}</td>
-                  <!-- <td>{{ payment.id }}</td> -->
-                  <td style="color:#001f73;"><b>{{ payment.amount | currency:'INR' }}</b></td>
-                  <td>{{ payment.paymentDate | date: 'dd/MM/yyyy' }}</td>
-                  <td>{{ payment.paymentMethod }}</td>  
-                </tr>
-              </tbody>
+                <thead>
+                  <tr>
+                    <th>Invoice ID</th>
+                    <th>Total Amount</th>
+                    <th>Amount Paid (₹)</th>
+                    <th>Payment Date</th>
+                    <th>Discount type</th>
+                    <th>Payment Method</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let payment of getFilteredPayments()">
+                    <td>{{ payment.invoice.id || 'N/A' }}</td>
+                    <td>{{ payment.totalAmount}}</td>
+                    <td style="color:#001f73;"><b>{{ payment.amountPaid | currency:'INR' }}</b></td>
+                    <td>{{ payment.transactionDate | date: 'dd/MM/yyyy' }}</td>
+                    <td>{{ payment.discountType }}</td>
+                    <td>{{ payment.paymentMethod }}</td>
+                    <td>
+                        <button class="download-btn" (click)="generatePDFBill(payment)"><i class="fas fa-download"></i></button>
+                      </td>
+                  </tr>
+                </tbody>
             </table><br>
-          
+              
+              
             <div class="pagination-controls" *ngIf="payments.length > 0">
               <button (click)="changePage(currentPage - 1)" [disabled]="currentPage === 0">Previous</button>
               <span>Page {{ currentPage + 1 }} of {{ totalPages }}</span>
