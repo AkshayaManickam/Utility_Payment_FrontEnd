@@ -407,8 +407,8 @@
                         <td>{{ request.id }}</td>
                         <td>{{ request.userMail }}</td>
                         <td>{{ request.query }}</td>
-                        <td>{{ request.oldValue || 'N/A' }}</td>
-                        <td>{{ request.newValue || 'N/A' }}</td>
+                        <td>{{ request.oldValue || '-' }}</td>
+                        <td>{{ request.newValue || '-' }}</td>
                         <td>{{ request.description }}</td>
                         <td [ngClass]="getStatusClass(request.status)">
                             {{ request.status }}

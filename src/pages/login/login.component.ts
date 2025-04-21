@@ -32,54 +32,82 @@ export class LoginComponent {
       });
     }
 
-  generateOtp() {
-    console.log('generateOtp() function is triggered'); 
-    if (this.loginForm.valid) {
-      this.email = this.loginForm.value.email;
-  
-      this.authService.generateOtp(this.email).subscribe(
-        (otpResponse) => {
-          if (otpResponse.message === "OTP Sent Successfully") {
-            this.isOtpGenerated = true;
-            this.otpForm.patchValue({ otp: otpResponse.otp });
+    ngOnInit(): void {
 
-            this.toastr.success(`OTP has been sent! OTP: ${otpResponse.otp}`, 'Success'); 
-          } else {
-            this.toastr.error(otpResponse.message, 'Error');
+      window.addEventListener('storage', (event) => {
+        if (event.key === 'logout-event') {
+          localStorage.clear();
+          sessionStorage.clear();
+          this.router.navigate(['/login']);
+        }
+      });
+  
+      this.authService.isLoggedIn().subscribe({
+        next: (response: any) => {
+          if (response.isLoggedIn) {
+            this.router.navigate(['/dashboard']);
           }
         },
-        (error) => {
-          this.toastr.error('Error generating OTP. Try again!', 'Error');
+        error: (err) => {
+          console.log('Not logged in or session expired');
         }
-      );
-    } else {
-      this.toastr.warning('Please enter a valid email.', 'Warning');
+      });
+  
     }
-  }
+
+    generateOtp() {
+      console.log('generateOtp() function is triggered');
+  
+      if (this.loginForm.valid) {
+        this.email = this.loginForm.value.email;
+  
+        this.authService.generateOtp(this.email).subscribe(
+          (otpResponse) => {
+            if (otpResponse.message === 'User already has an active session.') {
+              this.toastr.warning(otpResponse.message, 'Session Active');
+            } else if (otpResponse.message === 'OTP Sent Successfully') {
+              this.isOtpGenerated = true;
+              this.otpForm.patchValue({ otp: otpResponse.otp });
+              this.toastr.success(`OTP has been sent! OTP: ${otpResponse.otp}`, 'Success');
+            }
+          },
+          (error) => {
+            if (error.status === 409 && error.error?.message === 'User already has an active session.') {
+              this.toastr.warning(error.error.message, 'Session Conflict');
+            } else {
+              this.toastr.error('Error generating OTP. Try again!', 'Error');
+            }
+            console.error('OTP Generation Error:', error);
+          }
+        );
+      } else {
+        this.toastr.warning('Please enter a valid email.', 'Warning');
+      }
+    }
+  
 
   verifyOtp() {
   if (this.otpForm.valid) {
     const enteredOtp = this.otpForm.value.otp;
     this.authService.verifyOtp(this.email, enteredOtp).subscribe(
       (response) => {
-        console.log('OTP verification response:', response);  // Log OTP verification response
+        console.log('OTP verification response:', response);  
         if (response.valid) {
           this.toastr.success('Login successful!', 'Success');
-          localStorage.setItem('isLoggedIn', 'true');
-          localStorage.setItem('authToken', 'true'); // instead of isLoggedIn
-          localStorage.setItem('userId', response.userId); // Assuming response contains userId
-          console.log('User ID set in localStorage:', response.userId);  // Log the userId to confirm it
+          localStorage.setItem('sessionId', response.sessionId); 
+          console.log(response.sessionId);
+          localStorage.setItem('userId', response.userId); 
+          console.log('User ID set in localStorage:', response.userId);
           localStorage.setItem('userEmail', this.email);
           console.log(this.email);
-          localStorage.setItem('userName', response.userName); // Assuming response contains userName
-
           this.router.navigate(['/dashboard']);
+          console.log("Hii");
         } else {
           this.toastr.error('Invalid OTP! Try Again.', 'Error');
         }
       },
       (error) => {
-        console.error('Error verifying OTP:', error);  // Log error details
+        console.error('Error verifying OTP:', error);  
         this.toastr.error('Error verifying OTP. Try again!', 'Error');
       }
     );

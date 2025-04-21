@@ -15,6 +15,7 @@ import { Router } from '@angular/router';
 import { Observable } from 'rxjs';
 import { UserService } from '../../services/user.service';
 import { HelpCenterService } from '../../services/help-center.service';
+import { AuthService } from '../../services/auth.service';
 
 
 @Component({
@@ -33,10 +34,22 @@ export class DashboardComponent {
   logout() {
     const confirmLogout = window.confirm('Are you sure you want to log out?');
     if (confirmLogout) {
-      console.log('User logged out');
-      localStorage.removeItem('authToken'); 
-      sessionStorage.removeItem('authToken'); 
-      this.router.navigate(['/login']);
+      this.authService.logout().subscribe({
+        next: (response) => {
+          console.log('User logged out');
+          localStorage.removeItem('employeeId');
+          localStorage.removeItem('sessionId');
+          localStorage.setItem('logout-event', Date.now().toString());
+          localStorage.clear();
+          sessionStorage.clear();
+          this.toastr.success(response.message, 'Logout');
+          this.router.navigate(['/login']);
+        },
+        error: (error) => {
+          console.error('Error during logout:', error);
+          this.toastr.error('Error during logout. Please try again.', 'Error');
+        }
+      });
     }
   }
 
@@ -45,7 +58,7 @@ export class DashboardComponent {
   userForm!: FormGroup;
   helpForm!: FormGroup; 
 
-  constructor(private invoiceService: InvoiceService,private paymentService:PaymentService,private discountService: DiscountService,private toastr: ToastrService,private walletService: WalletService,private router: Router,private userService: UserService,private helpService: HelpCenterService,private fb: FormBuilder) {
+  constructor(private invoiceService: InvoiceService,private paymentService:PaymentService,private discountService: DiscountService,private toastr: ToastrService,private walletService: WalletService,private router: Router,private userService: UserService,private helpService: HelpCenterService,private fb: FormBuilder,private authService:AuthService) {
     this.userForm = this.fb.group({
       userEmail: new FormControl('')
     });
@@ -445,22 +458,29 @@ export class DashboardComponent {
   transactions: any[] = [];
 
   fetchRecentTransactions() {
-    if(this.userEmail){
+    if (this.userEmail) {
       this.paymentService.getWalletTransactions(this.userEmail).subscribe(
         (data) => {
           console.log('wallet');
           console.log(data);
-          this.transactions = data.map((payment: Transaction) => ({
-            description: `Payment via ${payment.paymentMethod}`,
-            amount: payment.amountPaid,
-            date: new Date(payment.transactionDate).toLocaleDateString('en-IN', {
-              day: '2-digit',
-              month: 'short',
-              year: 'numeric',
-              hour: '2-digit',
-              minute: '2-digit'
-          }) 
-          }));
+          this.transactions = data.map((payment: any) => { // Use 'any' for flexibility if necessary
+            // Assuming paymentDate is the correct field for the date
+            const transactionDate = new Date(payment.paymentDate); // Using 'paymentDate' from the response
+            const formattedDate = isNaN(transactionDate.getTime())
+              ? 'Invalid Date'
+              : transactionDate.toLocaleDateString('en-IN', {
+                  day: '2-digit',
+                  month: 'short',
+                  year: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                });
+            return {
+              description: `Payment via ${payment.paymentMethod}`,
+              amount: payment.amount,  
+              date: formattedDate,
+            };
+          });
         },
         (error) => {
           console.error('Error fetching transactions:', error);
@@ -468,6 +488,9 @@ export class DashboardComponent {
       );
     }
   }
+  
+
+  
 
   submitHelpRequest() {
     if (this.helpForm.valid) {
